@@ -1,6 +1,20 @@
 <resources>
-    <string name="app_name">Weatherly</string>
-    <string name="Main">Main</string>
-    <string name="Forecast">Forecast</string>
-    <string name="Settings">Settings</string>
+    <string name="app_name">WeatherX</string>
+    <string name="home">Home</string>
+    <string name="forecast">Forecast</string>
+    <string name="emergency">Emergency</string>
+    <string name="settings">Settings</string>
+    <string name="search_placeholder">Search City...</string>
+    <string name="last_updated">Last updated: %1$s</string>
+    <string name="use_gps">Use GPS Location</string>
+    <string name="theme_mode">Theme Mode</string>
+    <string name="version">Version</string>
+    <string name="smart_suggestions">Smart Suggestions</string>
+    <string name="ai_assistant">AI Assistant</string>
+    <string name="emergency_helplines">Emergency Helplines</string>
+    <string name="seven_day_forecast">7-Day Forecast</string>
+
+    <!-- Play Store Metadata -->
+    <string name="play_store_short_description">Smart weather alerts, AI-driven suggestions, and real-time local forecasts.</string>
+    <string name="play_store_full_description">Stay ahead of the weather with WeatherX, your intelligent weather companion. WeatherX provides hyper-local forecasts, real-time air quality (AQI) tracking, and smart AI-driven suggestions to help you plan your day. Whether it\u0027s recommending an umbrella or warning about extreme heat, WeatherX has you covered.\n\nKey Features:\n- Real-time Temperature \u0026 Conditions\n- 7-Day Detailed Forecast\n- Hourly Weather Updates\n- Smart AI Weather Assistant\n- Air Quality Index (AQI) Monitoring\n- Emergency Helplines Integration\n- Dynamic, Beautiful Animations based on current weather\n- Privacy-focused: No unnecessary data tracking.</string>
 </resources>

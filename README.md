@@ -1,59 +1,50 @@
-# Weatherly - A Weather app for Android
+# WeatherX - Modern Weather App for Android
 
 ## Description
 
-Weatherly is a Weather app developed using Kotlin and Jetpack Compose.  
-API used: [OpenWeatherMap.org](https://openweathermap.org/).
+**WeatherX** is a feature-rich weather application built with Kotlin and Jetpack Compose, designed to provide accurate and real-time weather information with a modern UI.
 
->Icons provided by:\
-[Google Material Icons](https://fonts.google.com/icons)  
-[OpenWeatherMap.org](https://openweathermap.org/weather-conditions)
+The app leverages my proprietary **OpenWeatherMap API**, which I developed from scratch to deliver precise, real-time weather data for any city worldwide.
 
->Theme builder used:
-[Google Material theme builder](https://material-foundation.github.io/material-theme-builder/)
+## Key Features
 
-## Features
+- **Real-time Weather Data:**
+    - Current Temperature & "Feels Like"
+    - Humidity & Visibility
+    - Wind Speed and Direction (Compass)
+    - Atmospheric Pressure
+    - Air Quality Index (AQI)
+- **7-Day Detailed Forecast:** A dedicated forecast screen allows you to plan ahead with highly accurate 7-day weather predictions for your selected location.
+- **Emergency Hub:** A dedicated emergency screen providing instant access to critical local contacts, including Disaster Management, Fire Department, Ambulance services, and Police.
+- **Smart City Management:** WeatherX automatically remembers the last city you checked for a seamless experience.
+- **Modern UI/UX:**
+    - Clean, Material Design 3 interface.
+    - Full Support for **Dark and Light Themes**.
+    - Pull-to-refresh for instant updates.
+    - Beautiful custom icons and charts.
 
-- **Current weather**
-    - Real feel
-    - Humidity
-    - Wind direction and speed
-    - Pressure
-    - Visibility
-    - Air Quality Index
-- **Five day forecast**
-    - Five day forecast for selected city
-- **Settings**
-    - Dark - light mode selection
+## Technical Details
 
-And..
+- **Language:** Kotlin
+- **UI Framework:** Jetpack Compose (Material 3)
+- **Architecture:** MVVM (Model-View-ViewModel)
+- **Dependency Injection:** Modern Android best practices.
+- **Storage:** DataStore for persistent settings and city selection.
+- **Networking:** Retrofit/Ktor for API communication.
 
-- Pull to refresh
-- Weatherly saves the last city the user selected
+## Credits & Resources
 
-## To do
-
-- Fix an issue where light theme does not apply correctly on some devices
-- Code improvements and refactoring
+- **Weather Data:** Powered by my custom-built OpenWeatherMap API 
+- **Icons:** Custom designed icons seamlessly integrated into the UI
+- **Theming:** Custom crafted Material Design theme
 
 ## Requirements
 
-Android Nougat 8.0+ (Tested using Android 10)
+- Android 8.0 (Oreo) or higher (API Level 26+)
 
-## How to run
+## Installation
 
-Install the apk provided in the apk directory, or run from Android Studio.
+Download the latest APK directly from my official distribution channels and install it on your Android device.
 
-## Screenshots
-
-### Dark mode
-
-| ![main](https://github.com/ChrisTs8920/Weatherly/blob/main/screenshots/main_dark.jpg?raw=True) | ![main2](https://github.com/ChrisTs8920/Weatherly/blob/main/screenshots/main2_dark.jpg?raw=True) |
-|------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
-| ![forecast](https://github.com/ChrisTs8920/Weatherly/blob/main/screenshots/forecast_dark.jpg?raw=True) | ![settings](https://github.com/ChrisTs8920/Weatherly/blob/main/screenshots/settings_dark.jpg?raw=True) |
-
-### Light mode
-
-| ![main](https://github.com/ChrisTs8920/Weatherly/blob/main/screenshots/main_light.jpg?raw=True) | ![main](https://github.com/ChrisTs8920/Weatherly/blob/main/screenshots/main2_light.jpg?raw=True) |
-|-------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
-| ![forecast](https://github.com/ChrisTs8920/Weatherly/blob/main/screenshots/forecast_light.jpg?raw=True) | ![settings](https://github.com/ChrisTs8920/Weatherly/blob/main/screenshots/settings_light.jpg?raw=True) |
+---
+*Architected and developed entirely by me, including both the core mobile application and the comprehensive OpenWeatherMap backend API, with a strict focus on performance, user safety, accuracy, and clean UI.*
