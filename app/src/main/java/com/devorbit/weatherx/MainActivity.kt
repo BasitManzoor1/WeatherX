@@ -14,6 +14,9 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,6 +34,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -39,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -82,6 +87,8 @@ fun WeatherApp(dataStore: DataStore, isDarkTheme: Boolean) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
     val locationHelper = remember { LocationHelper(context) }
+    val configuration = LocalConfiguration.current
+    val isWideScreen = configuration.screenWidthDp > 600
 
     val theme = if (isDarkTheme) {
         WeatherTheme(
@@ -175,88 +182,180 @@ fun WeatherApp(dataStore: DataStore, isDarkTheme: Boolean) {
         DynamicBackground(bgColors)
         WeatherAnimationOverlay(homeData?.weather?.getOrNull(0)?.main)
 
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = Color.Transparent,
-            bottomBar = {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.destination?.route
-                
-                BottomAppBar(
-                    containerColor = if (isDarkTheme) Color.Black.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.4f),
-                    modifier = Modifier
-                        .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                        .clip(RoundedCornerShape(32.dp)),
-                    contentPadding = PaddingValues(0.dp),
-                    tonalElevation = 0.dp
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        NavBarItem(
-                            icon = Icons.Rounded.Home,
-                            label = stringResource(R.string.home),
-                            isSelected = currentRoute == Screen.Main.route,
-                            onClick = { navController.navigate(Screen.Main.route) },
-                            theme = theme
-                        )
-                        NavBarItem(
-                            icon = Icons.AutoMirrored.Rounded.List,
-                            label = stringResource(R.string.forecast),
-                            isSelected = currentRoute == Screen.Forecast.route,
-                            onClick = { navController.navigate(Screen.Forecast.route) },
-                            theme = theme
-                        )
-                        NavBarItem(
-                            icon = Screen.Emergency.icon,
-                            label = stringResource(R.string.emergency),
-                            isSelected = currentRoute == Screen.Emergency.route,
-                            onClick = { navController.navigate(Screen.Emergency.route) },
-                            theme = theme
-                        )
-                        NavBarItem(
-                            icon = Icons.Rounded.Settings,
-                            label = stringResource(R.string.settings),
-                            isSelected = currentRoute == Screen.Settings.route,
-                            onClick = { navController.navigate(Screen.Settings.route) },
-                            theme = theme
+        Row(modifier = Modifier.fillMaxSize()) {
+            if (isWideScreen) {
+                AppNavigationRail(navController, theme)
+            }
+
+            Scaffold(
+                modifier = Modifier.weight(1f),
+                containerColor = Color.Transparent,
+                bottomBar = {
+                    if (!isWideScreen) {
+                        AppBottomBar(navController, theme, isDarkTheme)
+                    }
+                }
+            ) { padding ->
+                if (isLoading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = theme.accentColor)
+                    }
+                } else {
+                    Box(modifier = Modifier.padding(padding)) {
+                        AppNavHost(
+                            navController = navController,
+                            theme = theme,
+                            homeData = homeData,
+                            forecastData = forecastData,
+                            aqiValue = aqiValue,
+                            lastUpdated = lastUpdated,
+                            dataStore = dataStore,
+                            onSearch = {
+                                scope.launch {
+                                    dataStore.writeCity(it)
+                                    fetchData()
+                                }
+                            },
+                            onRefresh = { fetchData() },
+                            onUpdate = { fetchData() }
                         )
                     }
                 }
             }
-        ) { padding ->
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = theme.accentColor)
-                }
-            } else {
-                NavHost(
-                    navController = navController,
-                    startDestination = Screen.Main.route,
-                    modifier = Modifier.padding(padding)
-                ) {
-                    composable(Screen.Main.route) {
-                        HomeScreen(theme, homeData, forecastData, aqiValue, lastUpdated, onSearch = {
-                            scope.launch {
-                                dataStore.writeCity(it)
-                                fetchData()
-                            }
-                        }, onRefresh = { fetchData() })
-                    }
-                    composable(Screen.Forecast.route) {
-                        ForecastScreen(theme, forecastData)
-                    }
-                    composable(Screen.Emergency.route) {
-                        EmergencyScreen(theme)
-                    }
-                    composable(Screen.Settings.route) {
-                        SettingsScreen(theme, dataStore, onUpdate = { fetchData() })
-                    }
-                }
+        }
+    }
+}
+
+@Composable
+fun AppNavigationRail(navController: NavHostController, theme: WeatherTheme) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    NavigationRail(
+        containerColor = Color.Transparent,
+        header = {
+            Icon(
+                painter = painterResource(id = R.drawable._01d),
+                contentDescription = null,
+                tint = theme.accentColor,
+                modifier = Modifier.size(48.dp).padding(8.dp)
+            )
+        },
+        modifier = Modifier.padding(vertical = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxHeight(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            val items = listOf(
+                NavigationItem(Screen.Main.route, Icons.Rounded.Home, R.string.home),
+                NavigationItem(Screen.Forecast.route, Icons.AutoMirrored.Rounded.List, R.string.forecast),
+                NavigationItem(Screen.Emergency.route, Screen.Emergency.icon, R.string.emergency),
+                NavigationItem(Screen.Settings.route, Icons.Rounded.Settings, R.string.settings)
+            )
+
+            items.forEach { item ->
+                NavigationRailItem(
+                    icon = { Icon(item.icon, contentDescription = stringResource(item.labelRes)) },
+                    label = { Text(stringResource(item.labelRes)) },
+                    selected = currentRoute == item.route,
+                    onClick = { navController.navigate(item.route) },
+                    colors = NavigationRailItemDefaults.colors(
+                        selectedIconColor = theme.accentColor,
+                        selectedTextColor = theme.accentColor,
+                        unselectedIconColor = theme.onCardColor.copy(alpha = 0.6f),
+                        unselectedTextColor = theme.onCardColor.copy(alpha = 0.6f),
+                        indicatorColor = theme.accentColor.copy(alpha = 0.1f)
+                    )
+                )
+                Spacer(modifier = Modifier.height(12.dp))
             }
+        }
+    }
+}
+
+@Composable
+fun AppBottomBar(navController: NavHostController, theme: WeatherTheme, isDarkTheme: Boolean) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    BottomAppBar(
+        containerColor = if (isDarkTheme) Color.Black.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.4f),
+        modifier = Modifier
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .clip(RoundedCornerShape(32.dp)),
+        contentPadding = PaddingValues(0.dp),
+        tonalElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            NavBarItem(
+                icon = Icons.Rounded.Home,
+                label = stringResource(R.string.home),
+                isSelected = currentRoute == Screen.Main.route,
+                onClick = { navController.navigate(Screen.Main.route) },
+                theme = theme
+            )
+            NavBarItem(
+                icon = Icons.AutoMirrored.Rounded.List,
+                label = stringResource(R.string.forecast),
+                isSelected = currentRoute == Screen.Forecast.route,
+                onClick = { navController.navigate(Screen.Forecast.route) },
+                theme = theme
+            )
+            NavBarItem(
+                icon = Screen.Emergency.icon,
+                label = stringResource(R.string.emergency),
+                isSelected = currentRoute == Screen.Emergency.route,
+                onClick = { navController.navigate(Screen.Emergency.route) },
+                theme = theme
+            )
+            NavBarItem(
+                icon = Icons.Rounded.Settings,
+                label = stringResource(R.string.settings),
+                isSelected = currentRoute == Screen.Settings.route,
+                onClick = { navController.navigate(Screen.Settings.route) },
+                theme = theme
+            )
+        }
+    }
+}
+
+data class NavigationItem(val route: String, val icon: ImageVector, val labelRes: Int)
+
+@Composable
+fun AppNavHost(
+    navController: NavHostController,
+    theme: WeatherTheme,
+    homeData: WeatherApi.HomeJsonData?,
+    forecastData: WeatherApi.ForecastJsonData?,
+    aqiValue: Int?,
+    lastUpdated: String?,
+    dataStore: DataStore,
+    onSearch: (String) -> Unit,
+    onRefresh: () -> Unit,
+    onUpdate: () -> Unit
+) {
+    NavHost(
+        navController = navController,
+        startDestination = Screen.Main.route
+    ) {
+        composable(Screen.Main.route) {
+            HomeScreen(theme, homeData, forecastData, aqiValue, lastUpdated, onSearch = onSearch, onRefresh = onRefresh)
+        }
+        composable(Screen.Forecast.route) {
+            ForecastScreen(theme, forecastData)
+        }
+        composable(Screen.Emergency.route) {
+            EmergencyScreen(theme)
+        }
+        composable(Screen.Settings.route) {
+            SettingsScreen(theme, dataStore, onUpdate = onUpdate)
         }
     }
 }
@@ -393,6 +492,8 @@ fun HomeScreen(
     onRefresh: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    val configuration = LocalConfiguration.current
+    val isWideScreen = configuration.screenWidthDp > 600
 
     Column(
         modifier = Modifier
@@ -403,7 +504,6 @@ fun HomeScreen(
     ) {
         Spacer(modifier = Modifier.height(24.dp))
 
-        // attractive Centered WeatherX Title
         Text(
             text = stringResource(R.string.app_name),
             modifier = Modifier.fillMaxWidth(),
@@ -419,12 +519,12 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // City Search Bar
         TextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(if (isWideScreen) 0.6f else 1f)
+                .align(Alignment.CenterHorizontally)
                 .padding(horizontal = 24.dp)
                 .clip(RoundedCornerShape(16.dp)),
             placeholder = { Text(stringResource(R.string.search_placeholder), color = theme.onCardColor.copy(alpha = 0.5f)) },
@@ -458,42 +558,38 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         homeData?.let { data ->
-            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-                val date = ZonedDateTime.ofInstant(Instant.ofEpochSecond(data.dt.toLong()), ZoneId.systemDefault())
-                Text(
-                    text = date.format(DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.getDefault())),
-                    color = theme.onCardColor.copy(alpha = 0.7f),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
+            if (isWideScreen) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    Icon(Icons.Rounded.LocationOn, contentDescription = null, tint = theme.accentColor)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(data.name, color = theme.onCardColor, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Column(modifier = Modifier.weight(1.5f)) {
+                        WeatherHeader(data, lastUpdated, theme)
+                        MainWeatherCard(
+                            data = data,
+                            theme = theme,
+                            aqi = aqi ?: 0,
+                            pop = forecastData?.list?.firstOrNull()?.pop ?: 0.0
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        SectionHeader(stringResource(R.string.smart_suggestions), theme)
+                        SmartAssistantCard(data, aqi ?: 0, theme)
+                    }
                 }
-                lastUpdated?.let {
-                    Text(
-                        text = stringResource(R.string.last_updated, it),
-                        color = theme.onCardColor.copy(alpha = 0.6f),
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(start = 32.dp)
+            } else {
+                Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                    WeatherHeader(data, lastUpdated, theme)
+                    MainWeatherCard(
+                        data = data,
+                        theme = theme,
+                        aqi = aqi ?: 0,
+                        pop = forecastData?.list?.firstOrNull()?.pop ?: 0.0
                     )
+                    SectionHeader(stringResource(R.string.smart_suggestions), theme)
+                    SmartAssistantCard(data, aqi ?: 0, theme)
                 }
             }
-
-            MainWeatherCard(
-                data = data,
-                theme = theme,
-                aqi = aqi ?: 0,
-                pop = forecastData?.list?.firstOrNull()?.pop ?: 0.0
-            )
-
-            // Intelligent Weather Assistant Section
-            SectionHeader(stringResource(R.string.smart_suggestions), theme)
-            SmartAssistantCard(data, aqi ?: 0, theme)
         }
 
         SectionHeader("Hourly Forecast", theme)
@@ -509,6 +605,33 @@ fun HomeScreen(
 }
 
 @Composable
+fun WeatherHeader(data: WeatherApi.HomeJsonData, lastUpdated: String?, theme: WeatherTheme) {
+    val date = ZonedDateTime.ofInstant(Instant.ofEpochSecond(data.dt.toLong()), ZoneId.systemDefault())
+    Text(
+        text = date.format(DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.getDefault())),
+        color = theme.onCardColor.copy(alpha = 0.7f),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold
+    )
+    Spacer(modifier = Modifier.height(4.dp))
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Rounded.LocationOn, contentDescription = null, tint = theme.accentColor)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(data.name, color = theme.onCardColor, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+    }
+    lastUpdated?.let {
+        Text(
+            text = stringResource(R.string.last_updated, it),
+            color = theme.onCardColor.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(start = 32.dp)
+        )
+    }
+}
+
+@Composable
 fun SmartAssistantCard(data: WeatherApi.HomeJsonData, aqi: Int, theme: WeatherTheme) {
     val suggestions = remember(data, aqi) {
         val temp = data.main.temp
@@ -518,7 +641,6 @@ fun SmartAssistantCard(data: WeatherApi.HomeJsonData, aqi: Int, theme: WeatherTh
         
         val list = mutableListOf<String>()
         
-        // Temperature/Condition based (Safety, Health, Comfort)
         if (temp > 30) list.add("It's quite hot, stay hydrated \uD83D\uDCA7")
         else if (temp < 15 && temp > 5) list.add("Cool weather, wear a light jacket \uD83E\uDDE5")
         else if (temp <= 5) list.add("It's freezing, bundle up warmly \uD83E\uDDE3")
@@ -533,13 +655,11 @@ fun SmartAssistantCard(data: WeatherApi.HomeJsonData, aqi: Int, theme: WeatherTh
         if (humidity > 75) list.add("High humidity, stay in cool areas \uD83E\uDDF2")
         if (windSpeed > 25) list.add("Hold onto your hat, it's windy! \uD83E\uDDE2")
         
-        // AQI based (Health focus)
         if (aqi > 100) list.add("Air quality is low, wear a mask outdoors \uD83D\uDE37")
         else if (aqi < 50 && condition.contains("Clear", ignoreCase = true)) {
             list.add("Air quality is great, enjoy the fresh air \uD83D\uDE43")
         }
 
-        // Fallback/Positive reinforcement
         if (list.size < 3) list.add("Have a wonderful day ahead! \u2728")
         
         list.distinct().take(4)
@@ -548,7 +668,7 @@ fun SmartAssistantCard(data: WeatherApi.HomeJsonData, aqi: Int, theme: WeatherTh
     InteractiveSurface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 8.dp),
+            .padding(vertical = 8.dp),
         shape = RoundedCornerShape(28.dp),
         color = theme.cardColor
     ) {
@@ -597,6 +717,9 @@ fun SmartAssistantCard(data: WeatherApi.HomeJsonData, aqi: Int, theme: WeatherTh
 @Composable
 fun EmergencyScreen(theme: WeatherTheme) {
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val isWideScreen = configuration.screenWidthDp > 600
+
     val emergencyContacts = listOf(
         EmergencyContact("National Helpline", "112", Icons.Rounded.HealthAndSafety),
         EmergencyContact("Police", "100", Icons.Rounded.LocalPolice),
@@ -620,9 +743,11 @@ fun EmergencyScreen(theme: WeatherTheme) {
             fontWeight = FontWeight.Black
         )
         
-        LazyColumn(
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(if (isWideScreen) 2 else 1),
             contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 100.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(emergencyContacts) { contact ->
                 EmergencyItem(contact, theme) {
@@ -669,6 +794,9 @@ fun EmergencyItem(contact: EmergencyContact, theme: WeatherTheme, onClick: () ->
 
 @Composable
 fun ForecastScreen(theme: WeatherTheme, forecastData: WeatherApi.ForecastJsonData?) {
+    val configuration = LocalConfiguration.current
+    val isWideScreen = configuration.screenWidthDp > 600
+
     Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         Spacer(modifier = Modifier.height(24.dp))
         Text(
@@ -681,14 +809,15 @@ fun ForecastScreen(theme: WeatherTheme, forecastData: WeatherApi.ForecastJsonDat
         )
 
         forecastData?.list?.let { list ->
-            // Filter to get unique days, exactly 7 days
             val dailyForecast = list.distinctBy { 
                 ZonedDateTime.ofInstant(Instant.ofEpochSecond(it.dt.toLong()), ZoneOffset.UTC).toLocalDate() 
             }.take(7)
 
-            LazyColumn(
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(if (isWideScreen) 2 else 1),
                 contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 100.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(dailyForecast) { item ->
                     ForecastRow(item, theme)
@@ -704,7 +833,7 @@ fun SettingsScreen(theme: WeatherTheme, dataStore: DataStore, onUpdate: () -> Un
     val useGps by dataStore.useGpsFlow.collectAsState(initial = false)
     val themeMode by dataStore.themeModeFlow.collectAsState(initial = "SYSTEM")
 
-    Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+    Column(modifier = Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())) {
         Spacer(modifier = Modifier.height(24.dp))
         Text(
             text = stringResource(R.string.settings),
@@ -717,7 +846,6 @@ fun SettingsScreen(theme: WeatherTheme, dataStore: DataStore, onUpdate: () -> Un
         Spacer(modifier = Modifier.height(32.dp))
 
         Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-            // GPS Toggle
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -742,7 +870,6 @@ fun SettingsScreen(theme: WeatherTheme, dataStore: DataStore, onUpdate: () -> Un
 
             HorizontalDivider(color = theme.onCardColor.copy(alpha = 0.1f))
 
-            // Theme Mode Selector
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -821,7 +948,6 @@ fun ForecastRow(item: WeatherApi.ListData, theme: WeatherTheme) {
         shape = RoundedCornerShape(24.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            // Main row: Day and Temperature
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -848,14 +974,12 @@ fun ForecastRow(item: WeatherApi.ListData, theme: WeatherTheme) {
             HorizontalDivider(color = theme.onCardColor.copy(alpha = 0.1f))
             Spacer(modifier = Modifier.height(16.dp))
 
-            // parameters row: Temp, Rain Chance (using humidity icon), Pressure, Wind
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ForecastParamItem(painterResource(R.drawable.thermometer), "${item.main.temp.roundToInt()}°", theme)
-                // Showing Rain Chance % using humidity icon
                 ForecastParamItem(painterResource(R.drawable.humidity), "${(item.pop * 100).roundToInt()}%", theme)
                 ForecastParamItem(painterResource(R.drawable.pressure), "${item.main.pressure}hPa", theme)
                 ForecastParamItem(painterResource(R.drawable.speed), "${item.wind.speed.roundToInt()}m/s", theme)
@@ -906,7 +1030,7 @@ fun DynamicBackground(colors: List<Color>) {
 fun SectionHeader(title: String, theme: WeatherTheme) {
     Text(
         text = title,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         color = theme.onCardColor,
         style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.Bold,
@@ -966,7 +1090,7 @@ fun InteractiveSurface(
 
 @Composable
 fun MainWeatherCard(data: WeatherApi.HomeJsonData, theme: WeatherTheme, aqi: Int, pop: Double) {
-    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp)) {
+    Column(modifier = Modifier.padding(vertical = 20.dp)) {
         InteractiveSurface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(40.dp),
@@ -996,7 +1120,6 @@ fun MainWeatherCard(data: WeatherApi.HomeJsonData, theme: WeatherTheme, aqi: Int
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Stats rows
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     WeatherInfoItem(painterResource(R.drawable.humidity), "Rain", "${(pop * 100).roundToInt()}%", theme)
                     WeatherInfoItem(painterResource(R.drawable.pressure), "Pres", "${data.main.pressure}hPa", theme)
